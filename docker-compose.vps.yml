@@ -1,0 +1,79 @@
+services:
+  db:
+    image: postgres:16-alpine
+    env_file: .env.docker
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres/init-rls-user.sql:/docker-entrypoint-initdb.d/init-rls-user.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file: .env.docker
+    volumes:
+      - ./backend:/app
+      - ./docker/backend/entrypoint.sh:/entrypoint.sh:ro
+      - ./db.sqlite3:/app/db.sqlite3
+    ports:
+      - "8000:8000"
+    depends_on:
+      redis:
+        condition: service_healthy
+    command: /bin/bash /entrypoint.sh
+
+  celery-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file: .env.docker
+    volumes:
+      - ./backend:/app
+      - ./db.sqlite3:/app/db.sqlite3
+    depends_on:
+      redis:
+        condition: service_healthy
+    command: celery -A crm worker --loglevel=info
+
+  celery-beat:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file: .env.docker
+    volumes:
+      - ./backend:/app
+      - ./db.sqlite3:/app/db.sqlite3
+    depends_on:
+      redis:
+        condition: service_healthy
+    command: celery -A crm beat --loglevel=info
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.prod
+      args:
+        PUBLIC_DJANGO_API_URL: https://back.crm.valerion.ir
+    environment:
+      - PUBLIC_DJANGO_API_URL=https://back.crm.valerion.ir
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
