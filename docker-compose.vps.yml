@@ -3,8 +3,7 @@ services:
     image: postgres:16-alpine
     env_file: .env.docker
     volumes:
-      - postgres_data:/var/lib/postgresql/data
-      - ./docker/postgres/init-rls-user.sql:/docker-entrypoint-initdb.d/init-rls-user.sql:ro
+      - crm-p_postgres_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
@@ -19,22 +18,19 @@ services:
       timeout: 3s
       retries: 5
 
-
   backend:
     build:
       context: .
       dockerfile: Dockerfile
     env_file: .env.docker
     volumes:
-      - ./backend:/app
-      - ./docker/backend/entrypoint.sh:/entrypoint.sh:ro
       - ./db.sqlite3:/app/db.sqlite3
     ports:
       - "8000:8000"
     depends_on:
       redis:
         condition: service_healthy
-    command: /bin/bash /entrypoint.sh
+    command: gunicorn --bind 0.0.0.0:8000 --workers 4 crm.wsgi:application
 
   celery-worker:
     build:
@@ -42,7 +38,6 @@ services:
       dockerfile: Dockerfile
     env_file: .env.docker
     volumes:
-      - ./backend:/app
       - ./db.sqlite3:/app/db.sqlite3
     depends_on:
       redis:
@@ -55,7 +50,6 @@ services:
       dockerfile: Dockerfile
     env_file: .env.docker
     volumes:
-      - ./backend:/app
       - ./db.sqlite3:/app/db.sqlite3
     depends_on:
       redis:
@@ -76,4 +70,5 @@ services:
       - backend
 
 volumes:
-  postgres_data:
+  crm-p_postgres_data:
+    external: true
