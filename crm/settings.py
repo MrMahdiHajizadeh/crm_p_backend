@@ -338,7 +338,8 @@ SWAGGER_SETTINGS = {
 
 CORS_ALLOW_HEADERS = default_headers + ("org",)
 # Security: CORS configuration via environment variables
-CORS_ORIGIN_ALLOW_ALL = os.environ.get("CORS_ALLOW_ALL", "False").lower() == "true"
+CORS_ORIGIN_ALLOW_ALL = True
+CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOWED_ORIGINS = [
     origin.strip()
     for origin in os.environ.get(

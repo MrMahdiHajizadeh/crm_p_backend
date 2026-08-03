@@ -86,6 +86,11 @@ class ProductCreateSerializer(serializers.ModelSerializer):
             "is_active",
         )
 
+    def validate_sku(self, value):
+        if not value or not value.strip():
+            return None
+        return value.strip()
+
     def create(self, validated_data):
         request = self.context.get("request")
         if request and hasattr(request, "profile"):
@@ -96,6 +101,7 @@ class ProductCreateSerializer(serializers.ModelSerializer):
                     request.profile.org, "default_currency", "USD"
                 )
         return super().create(validated_data)
+
 
 
 # =============================================================================

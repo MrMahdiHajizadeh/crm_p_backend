@@ -138,6 +138,14 @@ class Lead(AssignableMixin, BaseModel):
     company_name = models.CharField(
         _("Company Name"), max_length=255, blank=True, null=True
     )
+    product = models.ForeignKey(
+        "invoices.Product",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="leads",
+        help_text="Product associated with this lead",
+    )
 
     # Kanban/Pipeline support
     stage = models.ForeignKey(

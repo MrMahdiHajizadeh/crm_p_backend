@@ -103,6 +103,9 @@ class InteractionLogCreateSerializer(serializers.ModelSerializer):
         return value
 
 
+from invoices.serializer import ProductSerializer
+
+
 class LeadSerializer(serializers.ModelSerializer):
     contacts = ContactSerializer(read_only=True, many=True)
     assigned_to = ProfileSerializer(read_only=True, many=True)
@@ -111,6 +114,7 @@ class LeadSerializer(serializers.ModelSerializer):
     lead_attachment = AttachmentsSerializer(read_only=True, many=True)
     teams = TeamsSerializer(read_only=True, many=True)
     lead_comments = LeadCommentSerializer(read_only=True, many=True)
+    product = ProductSerializer(read_only=True)
 
     class Meta:
         model = Lead
@@ -150,6 +154,7 @@ class LeadSerializer(serializers.ModelSerializer):
             "description",
             # Related
             "contacts",
+            "product",
             "lead_attachment",
             "lead_comments",
             "tags",
@@ -175,6 +180,7 @@ class LeadCreateSerializer(serializers.ModelSerializer):
         max_digits=12, decimal_places=2, required=False, allow_null=True
     )
     close_date = serializers.DateField(required=False, allow_null=True)
+    product_id = serializers.UUIDField(required=False, allow_null=True)
 
     def __init__(self, *args, **kwargs):
         request_obj = kwargs.pop("request_obj", None)
@@ -184,7 +190,8 @@ class LeadCreateSerializer(serializers.ModelSerializer):
         self.fields["first_name"].required = False
         self.fields["last_name"].required = False
         self.fields["salutation"].required = False
-        self.org = request_obj.profile.org
+        if request_obj and hasattr(request_obj, "profile") and request_obj.profile.org:
+            self.org = request_obj.profile.org
 
     class Meta:
         model = Lead
@@ -218,12 +225,20 @@ class LeadCreateSerializer(serializers.ModelSerializer):
             "last_contacted",
             "next_follow_up",
             "description",
+            "product_id",
             # System
             "company_name",
             "is_active",
         )
 
     def create(self, validated_data):
+        product_id = validated_data.pop("product_id", None)
+        if product_id:
+            from invoices.models import Product
+            try:
+                validated_data["product"] = Product.objects.get(id=product_id)
+            except Product.DoesNotExist:
+                pass
         # Default currency from org if not provided and has opportunity_amount
         if not validated_data.get("currency") and validated_data.get(
             "opportunity_amount"
@@ -232,6 +247,19 @@ class LeadCreateSerializer(serializers.ModelSerializer):
             if request and hasattr(request, "profile") and request.profile.org:
                 validated_data["currency"] = request.profile.org.default_currency
         return super().create(validated_data)
+
+    def update(self, instance, validated_data):
+        if "product_id" in validated_data:
+            product_id = validated_data.pop("product_id")
+            if product_id:
+                from invoices.models import Product
+                try:
+                    instance.product = Product.objects.get(id=product_id)
+                except Product.DoesNotExist:
+                    instance.product = None
+            else:
+                instance.product = None
+        return super().update(instance, validated_data)
 
 
 class LeadCreateSwaggerSerializer(serializers.ModelSerializer):

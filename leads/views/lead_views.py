@@ -90,6 +90,8 @@ class LeadListView(APIView, LimitOffsetPagination):
                 queryset = queryset.filter(email__icontains=params.get("email"))
             if params.get("rating"):
                 queryset = queryset.filter(rating=params.get("rating"))
+            if params.get("product"):
+                queryset = queryset.filter(product_id=params.get("product"))
             if params.get("search"):
                 search = params.get("search")
                 queryset = queryset.filter(
