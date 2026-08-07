@@ -231,6 +231,41 @@ class LeadCreateSerializer(serializers.ModelSerializer):
             "is_active",
         )
 
+    def to_internal_value(self, data):
+        if isinstance(data, dict):
+            data = data.copy()
+            if "status" in data and data["status"]:
+                st = str(data["status"]).strip().lower()
+                status_map = {
+                    "جدید": "assigned",
+                    "در انتظار": "assigned",
+                    "انتصاب شده": "assigned",
+                    "در حال بررسی": "in process",
+                    "تبدیل شده": "converted",
+                    "بازیافت شده": "recycled",
+                    "بسته شده": "closed"
+                }
+                if st in status_map:
+                    data["status"] = status_map[st]
+
+            if "rating" in data and data["rating"]:
+                rt = str(data["rating"]).strip()
+                if "داغ" in rt or rt.lower() == "hot":
+                    data["rating"] = "HOT"
+                elif "متوسط" in rt or rt.lower() == "warm":
+                    data["rating"] = "WARM"
+                elif "سرد" in rt or rt.lower() == "cold":
+                    data["rating"] = "COLD"
+
+            if "currency" in data and data["currency"]:
+                curr = str(data["currency"]).strip().lower()
+                if curr in ("تومان", "tom"):
+                    data["currency"] = "TOM"
+                elif curr in ("ریال", "irr"):
+                    data["currency"] = "IRR"
+
+        return super().to_internal_value(data)
+
     def create(self, validated_data):
         product_id = validated_data.pop("product_id", None)
         if product_id:
