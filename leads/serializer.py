@@ -264,6 +264,23 @@ class LeadCreateSerializer(serializers.ModelSerializer):
                 elif curr in ("ریال", "irr"):
                     data["currency"] = "IRR"
 
+            if "country" in data and data["country"]:
+                cn = str(data["country"]).strip().lower()
+                country_map = {
+                    "ایران": "IR",
+                    "امارات": "AE",
+                    "ترکیه": "TR",
+                    "آلمان": "DE",
+                    "کانادا": "CA",
+                    "آمریکا": "US",
+                    "سایر": None,
+                    "iran": "IR"
+                }
+                if cn in country_map:
+                    data["country"] = country_map[cn]
+                elif len(cn) != 2:
+                    data["country"] = "IR"
+
         return super().to_internal_value(data)
 
     def create(self, validated_data):
