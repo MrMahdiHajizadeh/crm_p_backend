@@ -90,6 +90,18 @@ class ProductCreateSerializer(serializers.ModelSerializer):
             "end_date",
         )
 
+    def to_internal_value(self, data):
+        if isinstance(data, dict):
+            data = data.copy()
+            for key in ("start_date", "end_date"):
+                if key in data and data[key]:
+                    val = str(data[key])
+                    persian_digits = '۰۱۲۳۴۵۶۷۸۹'
+                    for i, d in enumerate(persian_digits):
+                        val = val.replace(d, str(i))
+                    data[key] = val.replace("/", "-").strip()
+        return super().to_internal_value(data)
+
     def validate_sku(self, value):
         if not value or not value.strip():
             return None
