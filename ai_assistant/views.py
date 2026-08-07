@@ -12,6 +12,16 @@ from .serializers import (
 from .services import AIEngineService
 
 
+def get_org_and_profile(request):
+    profile = getattr(request, "profile", None)
+    if not profile and request.user and request.user.is_authenticated:
+        from common.models import Profile
+        profile = Profile.objects.filter(user=request.user).first()
+    if not profile or not profile.org:
+        return None, None
+    return profile.org, profile
+
+
 class AISettingView(APIView):
     """
     API endpoint for getting and updating AI settings (API key, proxy, model, endpoints).
@@ -20,19 +30,23 @@ class AISettingView(APIView):
     permission_classes = (IsAuthenticated,)
 
     def get(self, request):
-        org = request.profile.org
+        org, profile = get_org_and_profile(request)
+        if not org:
+            return Response({"error": "Organization context required."}, status=status.HTTP_401_UNAUTHORIZED)
         setting, _ = AISetting.objects.get_or_create(org=org)
         serializer = AISettingSerializer(setting)
         return Response(serializer.data)
 
     def patch(self, request):
-        if request.profile.role != "ADMIN" and not request.user.is_superuser:
+        org, profile = get_org_and_profile(request)
+        if not org:
+            return Response({"error": "Organization context required."}, status=status.HTTP_401_UNAUTHORIZED)
+        if profile.role != "ADMIN" and not request.user.is_superuser:
             return Response(
                 {"error": "فقط مدیران سیستم امکان تغییر تنظیمات هوش مصنوعی را دارند."},
                 status=status.HTTP_403_FORBIDDEN,
             )
 
-        org = request.profile.org
         setting, _ = AISetting.objects.get_or_create(org=org)
 
         serializer = AISettingSerializer(setting, data=request.data, partial=True)
@@ -52,8 +66,10 @@ class AIChatSessionListView(APIView):
     permission_classes = (IsAuthenticated,)
 
     def get(self, request):
-        org = request.profile.org
-        is_admin = request.profile.role == "ADMIN" or request.user.is_superuser
+        org, profile = get_org_and_profile(request)
+        if not org:
+            return Response({"error": "Organization context required."}, status=status.HTTP_401_UNAUTHORIZED)
+        is_admin = (profile and profile.role == "ADMIN") or request.user.is_superuser
         filter_all = request.query_params.get("all_team") == "true" or request.query_params.get("user_id")
 
         if is_admin and filter_all:
@@ -69,7 +85,9 @@ class AIChatSessionListView(APIView):
         return Response(serializer.data)
 
     def post(self, request):
-        org = request.profile.org
+        org, profile = get_org_and_profile(request)
+        if not org:
+            return Response({"error": "Organization context required."}, status=status.HTTP_401_UNAUTHORIZED)
         title = request.data.get("title", "گفتگوی جدید")
         session = AIChatSession.objects.create(
             org=org,
@@ -87,8 +105,10 @@ class AIChatSessionDetailView(APIView):
     permission_classes = (IsAuthenticated,)
 
     def get(self, request, session_id):
-        org = request.profile.org
-        is_admin = request.profile.role == "ADMIN" or request.user.is_superuser
+        org, profile = get_org_and_profile(request)
+        if not org:
+            return Response({"error": "Organization context required."}, status=status.HTTP_401_UNAUTHORIZED)
+        is_admin = (profile and profile.role == "ADMIN") or request.user.is_superuser
 
         try:
             if is_admin:
@@ -102,8 +122,10 @@ class AIChatSessionDetailView(APIView):
         return Response(serializer.data)
 
     def delete(self, request, session_id):
-        org = request.profile.org
-        is_admin = request.profile.role == "ADMIN" or request.user.is_superuser
+        org, profile = get_org_and_profile(request)
+        if not org:
+            return Response({"error": "Organization context required."}, status=status.HTTP_401_UNAUTHORIZED)
+        is_admin = (profile and profile.role == "ADMIN") or request.user.is_superuser
 
         try:
             if is_admin:
@@ -123,8 +145,16 @@ class AIChatMessageView(APIView):
     permission_classes = (IsAuthenticated,)
 
     def post(self, request, session_id):
-        org = request.profile.org
-        user_prompt = request.data.get("prompt", "").strip()
+        org, profile = get_org_and_profile(request)
+        if not org:
+            return Response({"error": "Organization context required."}, status=status.HTTP_401_UNAUTHORIZED)
+
+        user_prompt = (
+            request.data.get("prompt")
+            or request.data.get("content")
+            or request.data.get("message")
+            or ""
+        ).strip()
 
         if not user_prompt:
             return Response({"error": "متن سوال نمی‌تواند خالی باشد."}, status=status.HTTP_400_BAD_REQUEST)
