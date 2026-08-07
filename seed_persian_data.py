@@ -258,6 +258,23 @@ def seed_large_persian_crm_data():
             }
         )
 
+    # 11. Create Sample Products
+    from invoices.models import Product
+    products_data = [
+        {"name": "لپ‌تاپ سازمانی ProBook", "sku": "PROD-101", "category": "تجهیزات سخت‌افزاری", "price": 45000000.0, "currency": "IRR", "description": "لپ‌تاپ مخصوص پرسنل و کارشناسان فنی با پشتیبانی و گارانتی شرکتی"},
+        {"name": "لایسنس CRM سالانه", "sku": "PROD-102", "category": "نرم‌افزار و لایسنس", "price": 120000000.0, "currency": "IRR", "description": "اشتراک ۱ ساله پنل مدیریت مشتریان عمارت همراه با تمامی ماژول‌ها"},
+        {"name": "سرور اتوماسیون اداری", "sku": "PROD-103", "category": "زیرساخت و سرور", "price": 380000000.0, "currency": "IRR", "description": "سرور اختصاصی پشتیبانی از ۵۰۰ کاربر همزمان با رک اختصاصی"},
+        {"name": "پشتیبانی و نگهداری ماهانه", "sku": "PROD-104", "category": "خدمات پشتیبانی", "price": 15000000.0, "currency": "IRR", "description": "خدمات ۲۴/۷ رفع اشکال، به‌روزرسانی نرم‌افزار و پشتیبان‌گیری منظم"},
+        {"name": "پکیج امنیت و فایروال", "sku": "PROD-105", "category": "امنیت شبکه", "price": 95000000.0, "currency": "IRR", "description": "دیوار آتشین سخت‌افزاری و پیکربندی امنیت شبکه سازمانی"},
+        {"name": "سیستم سانترال و VOIP", "sku": "PROD-106", "category": "ارتباطات", "price": 65000000.0, "currency": "IRR", "description": "راه‌اندازی تلفن اینترنتی و تلفن‌خانه هوشمند سازمانی"}
+    ]
+    for p_info in products_data:
+        Product.objects.get_or_create(
+            org=org,
+            sku=p_info["sku"],
+            defaults=p_info
+        )
+
     print("[SUCCESS] Large Persian CRM Data Seeding Completed Successfully!")
 
 if __name__ == "__main__":

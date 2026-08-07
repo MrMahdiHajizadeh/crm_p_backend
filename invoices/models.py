@@ -150,6 +150,8 @@ class Product(BaseModel):
     )
     category = models.CharField(_("Category"), max_length=100, blank=True, null=True)
     is_active = models.BooleanField(_("Is Active"), default=True)
+    start_date = models.DateField(_("Start Date"), blank=True, null=True)
+    end_date = models.DateField(_("End Date"), blank=True, null=True)
     org = models.ForeignKey(Org, on_delete=models.CASCADE, related_name="products")
 
     class Meta:

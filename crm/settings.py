@@ -245,11 +245,11 @@ LOGGING = {
         },
         "logfile": {
             "class": "logging.FileHandler",
-            "filename": "server.log",
+            "filename": os.environ.get("LOG_FILE_PATH", os.path.join(BASE_DIR, "server.log")),
         },
         "security_audit": {
             "class": "logging.FileHandler",
-            "filename": "security_audit.log",
+            "filename": os.environ.get("SECURITY_LOG_FILE_PATH", "/tmp/security_audit.log"),
             "formatter": "security",
         },
     },

@@ -65,6 +65,8 @@ class ProductSerializer(serializers.ModelSerializer):
             "currency",
             "category",
             "is_active",
+            "start_date",
+            "end_date",
             "created_at",
             "updated_at",
         )
@@ -84,6 +86,8 @@ class ProductCreateSerializer(serializers.ModelSerializer):
             "currency",
             "category",
             "is_active",
+            "start_date",
+            "end_date",
         )
 
     def validate_sku(self, value):

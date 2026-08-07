@@ -19,13 +19,13 @@ class AISetting(BaseModel):
     )
     api_url = models.CharField(
         max_length=500,
-        default="https://api.openai.com/v1",
-        help_text="Base API Endpoint URL (e.g. https://api.openai.com/v1 or custom proxy/local endpoint)"
+        default="https://api.deepseek.com",
+        help_text="Base API Endpoint URL (e.g. https://api.deepseek.com or https://api.openai.com/v1)"
     )
     model_name = models.CharField(
         max_length=100,
-        default="gpt-4o-mini",
-        help_text="Target model (e.g. gpt-4o-mini, gpt-4o, gemini-1.5-flash, deepseek-chat)"
+        default="deepseek-chat",
+        help_text="Target model (e.g. deepseek-chat, gpt-4o-mini, gemini-1.5-flash)"
     )
     proxy_url = models.CharField(
         max_length=500,

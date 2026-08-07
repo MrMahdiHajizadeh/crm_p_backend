@@ -221,19 +221,37 @@ class CRMDataAnalyzer:
         seven_days_ago = now - timedelta(days=7)
         start_of_today = now.replace(hour=0, minute=0, second=0, microsecond=0)
 
-        # 1. Leads Analysis & Recent Records List
-        lead_qs = Lead.objects.filter(org=org)
-        total_leads = lead_qs.count()
-        leads_today = lead_qs.filter(created_at__gte=start_of_today).count()
-        leads_this_week = lead_qs.filter(created_at__gte=seven_days_ago).count()
-        leads_this_month = lead_qs.filter(created_at__gte=thirty_days_ago).count()
+        org_name = getattr(org, "name", "سازمان")
 
-        status_breakdown = list(
-            lead_qs.values("status").annotate(count=Count("id")).order_by("-count")
-        )
-        rating_breakdown = list(
-            lead_qs.values("rating").annotate(count=Count("id")).order_by("-count")
-        )
+        try:
+            # 1. Leads Analysis & Recent Records List
+            lead_qs = Lead.objects.filter(org=org)
+            total_leads = lead_qs.count()
+            leads_today = lead_qs.filter(created_at__gte=start_of_today).count()
+            leads_this_week = lead_qs.filter(created_at__gte=seven_days_ago).count()
+            leads_this_month = lead_qs.filter(created_at__gte=thirty_days_ago).count()
+
+            status_breakdown = list(
+                lead_qs.values("status").annotate(count=Count("id")).order_by("-count")
+            )
+            rating_breakdown = list(
+                lead_qs.values("rating").annotate(count=Count("id")).order_by("-count")
+            )
+        except Exception as e:
+            logger.warning(f"Failed to fetch organization snapshot: {e}")
+            return {
+                "timestamp": now.strftime("%Y-%m-%d %H:%M:%S"),
+                "organization_name": org_name,
+                "leads": {"total": 0, "created_today": 0, "created_this_week": 0, "created_this_month": 0, "by_status": [], "by_rating": [], "recent_sample": []},
+                "contacts_count": 0,
+                "contacts_sample": [],
+                "accounts_count": 0,
+                "opportunities": {"total_count": 0, "pipeline_value": 0.0},
+                "tasks": {"total": 0, "overdue": 0},
+                "invoices": {"total": 0, "total_revenue": 0.0},
+                "team_performance": [],
+                "search_results": {}
+            }
 
         # Top recent leads snapshot list for direct LLM visibility
         recent_leads_sample = []
@@ -447,19 +465,19 @@ class AIEngineService:
         snapshot = CRMDataAnalyzer.get_organization_snapshot(org, query_prompt=user_prompt)
         prompt_context = CRMDataAnalyzer.format_snapshot_as_prompt_text(snapshot)
 
-        api_key = ai_setting.api_key if ai_setting else ""
-        api_url = (ai_setting.api_url if ai_setting and ai_setting.api_url else "https://api.openai.com/v1").rstrip("/")
-        model_name = ai_setting.model_name if ai_setting and ai_setting.model_name else "gpt-4o-mini"
+        api_key = (ai_setting.api_key if ai_setting and ai_setting.api_key else os.environ.get("DEEPSEEK_API_KEY", "")).strip()
+        api_url = (ai_setting.api_url if ai_setting and ai_setting.api_url else "https://api.deepseek.com").rstrip("/")
+        model_name = (ai_setting.model_name if ai_setting and ai_setting.model_name else "deepseek-chat").strip()
         proxy_url = ai_setting.proxy_url if ai_setting else ""
+        is_active = ai_setting.is_active if ai_setting is not None else True
 
         system_instruction = (
-            "شما دستیار هوشمند، جستجوگر دقیق و تحلیل‌گر دیتابیس CRM هستید.\n"
-            "نکته بسیار مهم در جداول مشخصات سرنخ‌ها:\n"
-            "بین 'عنوان/نام سرنخ (Lead Title)' (مانند استعلام خرید، توسعه پورتال، پروژه اتوماسیون) و 'نام و نام خانوادگی فرد/مخاطب (Person Name)' (مانند حامد طاهری، کامران رستمی) تفکیک قائل شوید و هر دو فیلد را به صورت مجزا در دو ستون یا دو سطر جداگانه نمایش دهید.\n\n"
-            "دستورالعمل پاسخگویی:\n"
-            "1. اگر کاربر درباره یک شماره تلفن یا مشخصات یک سرنخ پرسید، جدول کامل مشخصات شامل: [عنوان/نام سرنخ | نام و نام خانوادگی فرد | شماره تلفن | ایمیل | شرکت | وضعیت | کارشناس مسئول] را تفکیک‌شده بنویسید.\n"
-            "2. هرگز این دو فیلد را با هم ترکیب نکنید.\n"
-            "3. پاسخ شما باید کاملاً مستند، روان و همراه با جدول‌ها یا لیست‌های مارک‌داون باشد."
+            "شما دستیار هوشمند CRM عمارت (قدرت گرفته از هوش مصنوعی DeepSeek) هستید.\n"
+            "پاسخگویی به کاربر باید کاملاً فارسی، محترمانه، صمیمی و کاربردی باشد.\n\n"
+            "قوانین پاسخگویی:\n"
+            "1. اگر کاربر پیام ساده، احوالپرسی یا سلام (مانند hi, hello, سلام, درود) فرستاد، پاسخ گرم، صمیمی و کوتاه بدهید و بپرسید چگونه می‌توانید به او در مدیریت CRM (سرنخ‌ها، مخاطبین، وظایف، گزارش‌ها) کمک کنید.\n"
+            "2. اگر کاربر درباره یک سرنخ، شماره تلفن، مخاطب، فاکتور یا داده‌ای از دیتابیس پرسید، با دقت کامل اطلاعات موجود در دیتابیس (که در ادامه آمده است) را استخراج کرده و به صورت جدول یا لیست‌های منظم مارک‌داون ارائه دهید.\n"
+            "3. در جداول مشخصات سرنخ‌ها، حتماً بین 'عنوان/نام سرنخ (Lead Title)' و 'نام و نام خانوادگی فرد/مخاطب (Person Name)' تفکیک قائل شوید و هر دو را به روشنی نمایش دهید."
         )
 
         messages = [
@@ -467,7 +485,7 @@ class AIEngineService:
             {"role": "user", "content": user_prompt}
         ]
 
-        if api_key and ai_setting.is_active:
+        if api_key and is_active:
             try:
                 content, reasoning = cls._call_external_llm_api(
                     api_url=api_url,
@@ -613,6 +631,14 @@ class AIEngineService:
                 content.append(
                     f"| **{m['user_name']}** | {m['role']} | {m['leads']['total_assigned']} (تبدیل: {m['leads']['converted']}) | {m['opportunities']['pipeline_value']:,.0f} تومان | {m['tasks']['overdue']} مورد | {m['logged_interactions']} تماس/جلسه |"
                 )
+
+        elif prompt_lower.strip() in ["hi", "hello", "hey", "سلام", "درود", "خوبی", "چطوری", "چخبر"]:
+            content.append("سلام! 👋 من دستیار هوشمند CRM عمارت هستم.\n")
+            content.append("چگونه می‌توانم به شما کمک کنم؟ شما می‌توانید درباره موارد زیر پرس‌وجو کنید:\n")
+            content.append("- 📞 **جستجوی شماره تلفن یا نام مخاطبین**")
+            content.append("- 🎯 **اطلاعات و وضعیت سرنخ‌ها (Leads)**")
+            content.append("- 👥 **گزارش عملکرد کارشناسان و تیم فروش**")
+            content.append("- 📊 **خلاصه آمار معامله‌ها و فاکتورها**")
 
         else:
             content.append(f"### 📊 گزارش و تحلیل جامع داده‌های CRM ({snapshot['organization_name']})\n")
