@@ -61,9 +61,9 @@ class TestLeadListView:
                 "email": "jane@example.com",
             },
         )
-        assert response.status_code == 200
+        assert response.status_code == 201
         data = response.json()
-        assert data["error"] is False
+        assert data.get("id")
         assert Lead.objects.filter(email="jane@example.com", org=org_a).exists()
 
     def test_create_lead_invalid_data(self, admin_client):
@@ -118,8 +118,8 @@ class TestLeadListView:
             "probability": 50,
         }
         response = admin_client.post(LEADS_LIST_URL, payload, format="json")
-        assert response.status_code == 200
-        assert response.data["error"] is False
+        assert response.status_code == 201
+        assert response.data.get("id")
         lead = Lead.objects.get(email="full@example.com")
         assert lead.city == "Springfield"
         assert lead.company_name == "Acme Inc"
@@ -138,7 +138,7 @@ class TestLeadListView:
             "tags": [str(tag.id)],
         }
         response = admin_client.post(LEADS_LIST_URL, payload, format="json")
-        assert response.status_code == 200
+        assert response.status_code == 201
         lead = Lead.objects.get(email="tagged@example.com")
         assert tag in lead.tags.all()
 
@@ -154,7 +154,7 @@ class TestLeadListView:
             "assigned_to": [str(admin_profile.id)],
         }
         response = admin_client.post(LEADS_LIST_URL, payload, format="json")
-        assert response.status_code == 200
+        assert response.status_code == 201
         lead = Lead.objects.get(email="assigned@example.com")
         assert admin_profile in lead.assigned_to.all()
         mock_email.assert_called_once()
@@ -173,7 +173,7 @@ class TestLeadListView:
             "teams": [str(team.id)],
         }
         response = admin_client.post(LEADS_LIST_URL, payload, format="json")
-        assert response.status_code == 200
+        assert response.status_code == 201
         lead = Lead.objects.get(email="teamed@example.com")
         assert team in lead.teams.all()
 
@@ -1022,7 +1022,7 @@ class TestLeadUniqueEmail:
                 "email": "shared@example.com",
             },
         )
-        assert resp1.status_code == 200
+        assert resp1.status_code == 201
 
         resp2 = org_b_client.post(
             "/api/leads/",
@@ -1032,7 +1032,7 @@ class TestLeadUniqueEmail:
                 "email": "shared@example.com",
             },
         )
-        assert resp2.status_code == 200
+        assert resp2.status_code == 201
 
 
 # ================================================================
@@ -1166,7 +1166,7 @@ class TestLeadCreateWithM2M:
             "contacts": [str(contact.id)],
         }
         response = admin_client.post(LEADS_LIST_URL, payload, format="json")
-        assert response.status_code == 200
+        assert response.status_code == 201
         lead = Lead.objects.get(email="withcontact@example.com")
         assert contact in lead.contacts.all()
 
@@ -1183,7 +1183,7 @@ class TestLeadCreateWithM2M:
             "lead_attachment": test_file,
         }
         response = admin_client.post(LEADS_LIST_URL, payload, format="multipart")
-        assert response.status_code == 200
+        assert response.status_code == 201
         lead = Lead.objects.get(email="attached@example.com")
         ct = ContentType.objects.get_for_model(Lead)
         assert Attachments.objects.filter(content_type=ct, object_id=lead.id).exists()
@@ -1200,7 +1200,7 @@ class TestLeadCreateWithM2M:
             "assigned_to": [str(admin_profile.id)],
         }
         response = admin_client.post(LEADS_LIST_URL, payload, format="json")
-        assert response.status_code == 200
+        assert response.status_code == 201
         mock_email.assert_called_once()
         call_args = mock_email.call_args
         assert admin_profile.id in call_args[0][0]
@@ -1251,7 +1251,7 @@ class TestLeadCreateWithM2M:
             "teams": json.dumps([str(team.id)]),
         }
         response = admin_client.post(LEADS_LIST_URL, payload, format="json")
-        assert response.status_code == 200
+        assert response.status_code == 201
         lead = Lead.objects.get(email="stringteam@example.com")
         assert team in lead.teams.all()
 
@@ -1269,7 +1269,7 @@ class TestLeadCreateWithM2M:
             "assigned_to": json.dumps([str(admin_profile.id)]),
         }
         response = admin_client.post(LEADS_LIST_URL, payload, format="json")
-        assert response.status_code == 200
+        assert response.status_code == 201
         lead = Lead.objects.get(email="stringassign@example.com")
         assert admin_profile in lead.assigned_to.all()
 

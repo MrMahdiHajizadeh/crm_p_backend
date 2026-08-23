@@ -379,7 +379,7 @@ class LeadInteractionListCreateView(APIView):
         responses={201: InteractionLogSerializer()},
     )
     def post(self, request, *args, **kwargs):
-        serializer = InteractionLogCreateSerializer(data=request.data)
+        serializer = InteractionLogCreateSerializer(data=request.data, context={"request": request})
         if serializer.is_valid():
             interaction = serializer.save(
                 org=request.profile.org,
@@ -441,7 +441,7 @@ class LeadScopedInteractionView(APIView):
     )
     def post(self, request, pk, *args, **kwargs):
         lead = self.get_lead(pk)
-        serializer = InteractionLogCreateSerializer(data=request.data)
+        serializer = InteractionLogCreateSerializer(data=request.data, context={"request": request})
         if serializer.is_valid():
             interaction = serializer.save(
                 org=request.profile.org,
@@ -491,7 +491,7 @@ class InteractionLogDetailView(APIView):
     )
     def put(self, request, pk, *args, **kwargs):
         interaction = self.get_object(pk)
-        serializer = InteractionLogCreateSerializer(interaction, data=request.data)
+        serializer = InteractionLogCreateSerializer(interaction, data=request.data, context={"request": request})
         if serializer.is_valid():
             serializer.save()
             return Response(InteractionLogSerializer(interaction).data)
@@ -509,7 +509,7 @@ class InteractionLogDetailView(APIView):
     def patch(self, request, pk, *args, **kwargs):
         interaction = self.get_object(pk)
         serializer = InteractionLogCreateSerializer(
-            interaction, data=request.data, partial=True
+            interaction, data=request.data, partial=True, context={"request": request}
         )
         if serializer.is_valid():
             serializer.save()

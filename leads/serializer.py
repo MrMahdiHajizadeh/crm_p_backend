@@ -102,6 +102,48 @@ class InteractionLogCreateSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(f"Invalid entity type. Must be one of: {', '.join(valid_types.keys())}")
         return value
 
+    def validate(self, attrs):
+        """Ensure the referenced entity actually exists in the caller's org.
+
+        Without this, the app could store interactions pointing to phantom ids
+        (e.g. locally-generated UUIDs), which surface as "[Deleted Lead]" in
+        the UI even though nothing was deleted.
+        """
+        entity_type = attrs.get("entity_type")
+        entity_id = attrs.get("entity_id")
+        if not entity_type or not entity_id:
+            return attrs
+        request = self.context.get("request")
+        org = getattr(getattr(request, "profile", None), "org", None)
+        if org is None:
+            return attrs
+        try:
+            if entity_type == "Account":
+                from accounts.models import Account
+                model = Account
+            elif entity_type == "Opportunity":
+                from opportunity.models import Opportunity
+                model = Opportunity
+            elif entity_type == "Contact":
+                from contacts.models import Contact
+                model = Contact
+            elif entity_type == "Lead":
+                model = Lead
+            else:
+                return attrs
+        except ImportError:
+            return attrs
+        if not model.objects.filter(id=entity_id, org=org).exists():
+            raise serializers.ValidationError(
+                {
+                    "entity_id": (
+                        f"The referenced {entity_type} does not exist in your organization. "
+                        "Please refresh your data and try again."
+                    )
+                }
+            )
+        return attrs
+
 
 from invoices.serializer import ProductSerializer
 

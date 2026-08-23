@@ -21,7 +21,7 @@ COMPANY_PREFIXES = ["شرکت فناوری", "گروه صنعتی", "صنایع 
 COMPANY_NAMES = ["عمارت پارس", "آریا فولاد", "سپهر سلامت", "پاسارگاد", "صادقین", "البرز", "پردیس دیجتال", "کیا صنعت", "سیستک", "زاگرس", "خلیج فارس", "نگین شرق", "تمدن آریایی", "توسعه آفتاب", "فن‌آوران نوآوران"]
 CITIES = ["تهران", "اصفهان", "شیراز", "مشهد", "تبریز", "کرج", "اهواز", "رشت", "قم", "یزد"]
 SOURCES = ["وب‌سایت", "کمپین اینستاگرام", "نمایشگاه بین‌المللی", "ارتباط تلفنی", "معرفی مشتریان", "ارتباط لینکدین", "تبلیغات گوگل"]
-LEAD_STATUSES = ["NEW", "IN_PROCESS", "CONVERTED", "RECYCLED", "CLOSED"]
+LEAD_STATUSES = ["assigned", "in process", "converted", "recycled", "closed"]
 LEAD_RATINGS = ["HOT", "WARM", "COLD"]
 STAGES = ["QUALIFICATION", "NEEDS_ANALYSIS", "PROPOSAL", "NEGOTIATION", "CLOSED_WON", "CLOSED_LOST"]
 TASK_PRIORITIES = ["Low", "Medium", "High"]
@@ -232,7 +232,7 @@ def seed_large_persian_crm_data():
             org=org,
             entity_type="Lead",
             entity_id=lead_target.id,
-            interaction_type=random.choice(["CALL", "MEETING", "EMAIL", "NOTE"]),
+            interaction_type=random.choice(["call", "meeting", "email", "note"]),
             subject=f"پیگیری تعامل شماره {i+1} با {lead_target.first_name} {lead_target.last_name}",
             description=f"پیگیری کارشناس {assigned_profile.user.name} درباره پروژه {lead_target.company_name}. توضیحات ثبت شده.",
             follow_up_date=timezone.now() + timedelta(days=random.randint(-3, 15)),

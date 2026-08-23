@@ -365,8 +365,8 @@ class LeadListView(APIView, LimitOffsetPagination):
                     status=status.HTTP_200_OK,
                 )
             return Response(
-                {"error": False, "message": "Lead Created Successfully"},
-                status=status.HTTP_200_OK,
+                LeadSerializer(lead_obj, context={"request": request}).data,
+                status=status.HTTP_201_CREATED,
             )
         return Response(
             {"error": True, "errors": serializer.errors},
